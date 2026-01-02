@@ -1,0 +1,99 @@
+using System;
+using System.Collections.Generic;
+using System.ComponentModel;
+using System.Data;
+using System.Drawing;
+using System.Linq;
+using System.Text;
+using System.Threading.Tasks;
+using System.Windows.Forms;
+
+namespace Graphing_With_Bitmaps
+{
+    public partial class Form1 : Form
+    {
+        private Bitmap canvas; //instantiates a persistent bitmap.
+        private Graphics canvasGraphics; //object that does the drawing.
+
+        public Form1()
+        {
+            InitializeComponent();
+
+            this.Text = "Bitmap Graph Plot Example"; //REMOVE THIS?
+            this.Width = 800; //REMOVE THIS?
+            this.Height = 600; //REMOVE THIS?
+            this.DoubleBuffered = true; //keep being reading that this reduces drawn line flicker.
+            
+            InitializeCanvas(); //calls method that creates the bitmap and its graphics object after disposing of any existing ones.
+            PlotSampleData(); //CURRENTLY plots the test data, not the actual 'WHO' data. COMMENT WILL NEED UPDATING.
+        }
+
+        private void InitializeCanvas()
+        {
+            canvasGraphics?.Dispose(); //ANNOTATE
+            canvas?.Dispose(); //ANNOTATE
+            canvas = new Bitmap(this.ClientSize.Width, this.ClientSize.Height); //ensures the bitmap is the size of the entire client area (SUBJECT TO CHANGE).
+            canvasGraphics = Graphics.FromImage(canvas); //creates bitmap's graphics object.
+            canvasGraphics.Clear(Color.White); //sets the bitmap's background to white.
+        }
+
+        protected override void OnPaint(PaintEventArgs e)
+        {
+            base.OnPaint(e);
+
+            e.Graphics.DrawImageUnscaled(canvas, 0, 0); //places bitmap on the form, aligned with the top left (coordinate point (0,0)).
+        }
+
+        private void Form1_Load(object sender, EventArgs e)
+        {
+
+        }
+
+        protected override void OnResize(EventArgs e) //for when people minimise and maximise their window.
+        {
+            base.OnResize(e);
+
+            if (canvas == null) //kept getting a null unhandled exception at g.DrawImageUnscaled(canvas, 0, 0) a little later on in the code so I added this here.
+                return;
+
+            if (this.ClientSize.Width <= 0 || this.ClientSize.Height <= 0) //ignore if the window is ever minimised.
+                return;
+
+            Bitmap newCanvas = new Bitmap(this.ClientSize.Width, this.ClientSize.Height); //bitmap resized to match ClientSize area.
+
+            using (Graphics g = Graphics.FromImage(newCanvas)) //temp graphics object.
+            {
+                g.Clear(Color.White); //reset background upon resizing.
+                g.DrawImageUnscaled(canvas, 0, 0); //copy the graph from the previous bitmap onto this new, resized bitmap.
+            }
+
+            canvasGraphics.Dispose(); //dispose old the old graphics
+            canvas.Dispose(); //dispose of the old bitmap CHECK IF DISPOSAL CAN BE DONE IN 1 GO E.G. DISPOSING OF JUST THE CANVAS TO GET RID OF EVERYTHING.
+            canvas = newCanvas; //replace the old canvas with the new canvas (HOW IF THE OLD ONE HAS BEEN DISPOSED OF).
+            canvasGraphics = Graphics.FromImage(canvas); //new bitmap needs new graphics object.
+            this.Invalidate(); //force the form to paint the graph again
+        }
+
+        private void PlotSampleData()
+        {
+            Point[] dataPoints = //STRUCTURES HAHAHAHAHAHAHA
+            {
+                new Point(50, 400), //DO THESE ALL HAVE TO BE NEW?
+                new Point(150, 300),
+                new Point(250, 350),
+                new Point(350, 200),
+                new Point(450, 250),
+                new Point(550, 150),
+                new Point(650, 180)
+            };
+
+            using (Pen graphPen = new Pen(Color.Blue, 2)) //pen for drawing the graph itself
+            {
+                canvasGraphics.DrawLines(graphPen, dataPoints); //paints lines connecting the data points provided above.
+            }
+
+            this.Invalidate(); //force the form to paint the graph again
+        }
+
+    }
+}
