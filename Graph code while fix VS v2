@@ -1,0 +1,78 @@
+using System;
+using System.Collections.Generic;
+using System.ComponentModel;
+using System.Data;
+using System.Drawing;
+using System.Linq;
+using System.Text;
+using System.Threading.Tasks;
+using System.Windows.Forms;
+
+namespace NEA_Graphing
+{
+    public partial class Form1 : Form
+    {
+        public Form1()
+        {
+            InitializeComponent();
+
+            this.Paint += Form1_Paint; //forgot to write this and wasted ages debugging code
+            this.DoubleBuffered = true;
+        }
+
+        private void Form1_Load(object sender, EventArgs e)
+        {
+
+        }
+
+        //TEMP BITMAP TEST CODE
+        Bitmap canvas;
+        protected override void OnLoad(EventArgs e)
+        {
+            base.OnLoad(e);
+            canvas = new Bitmap(this.ClientSize.Width, this.ClientSize.Height);
+        }
+
+        private void Form1_Paint(object sender, PaintEventArgs pE) //will contain 
+        {
+            Graphics g = pE.Graphics;
+
+            int borderT = 50; //arbitrarily chosen
+            int borderB = 5;
+            int borderL = 100; //greater so that there's space to write the y-axis 
+            int borderR = 50;
+
+            Pen axes = new Pen(Color.Black, 2); //defines the pen that draws each axis
+            Pen clear = new Pen(Color.White, 100);
+
+            int graphsWidth = this.ClientSize.Width - (borderL + borderR); //ClientSize seems to be forms app window, but excluding the border with the Close button. Coords start at 0,0 in the top left.
+            int graphsHeight = this.ClientSize.Height - (borderT + borderB);
+
+            g.DrawImageUnscaled(canvas, 0, 0);
+
+            
+
+            using (axes)
+            {
+                g.Clear(this.BackColor);
+                g.DrawLine(axes, borderL, (this.ClientSize.Height - borderB), (borderL + graphsWidth), (this.ClientSize.Height - borderB));
+            } //should use pen 'axes' to draw the x-axis
+            
+
+            using (axes)
+            {
+                //g.DrawLine(axes, 0, 0, 10, 10);
+            } //should use pen 'axes' to draw the y-axis
+        }
+
+        void DrawLineOnce()
+        {
+            using (Graphics c = Graphics.FromImage(canvas))
+            {
+                c.DrawLine(Pens.Black, 0, 0, 100, 100);
+            }
+            Invalidate();
+        }
+
+    }
+}
