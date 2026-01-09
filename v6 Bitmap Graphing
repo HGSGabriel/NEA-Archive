@@ -1,0 +1,195 @@
+using System;
+using System.Collections.Generic;
+using System.ComponentModel;
+using System.Data;
+using System.Drawing;
+using System.Linq;
+using System.Text;
+using System.Threading.Tasks;
+using System.Windows.Forms;
+
+namespace NEA_Graphing_with_Bitmaps_in_Core
+{
+    public partial class Form1 : Form
+    {
+        private Bitmap canvas; //instantiates a persistent bitmap.
+        private Graphics canvasGraphics; //object that does the drawing.
+
+        public Form1()
+        {
+            InitializeComponent();
+
+            this.Width = 800; //REMOVE THIS?
+            this.Height = 600; //REMOVE THIS?
+            this.DoubleBuffered = true; //keep being reading that this reduces drawn line flicker.
+
+            InitializeCanvas(); //calls method that creates the bitmap and its graphics object after disposing of any existing ones.
+            //DrawAxes();
+            //PlotSampleData(); //CURRENTLY plots the test data, not the actual 'WHO' data. COMMENT WILL NEED UPDATING.
+            RedrawGraph();
+        }
+
+        private void InitializeCanvas()
+        {
+            canvasGraphics?.Dispose(); //ANNOTATE
+            canvas?.Dispose(); //ANNOTATE
+            canvas = new Bitmap(this.ClientSize.Width, this.ClientSize.Height); //ensures the bitmap is the size of the entire client area (SUBJECT TO CHANGE).
+            canvasGraphics = Graphics.FromImage(canvas); //creates bitmap's graphics object.
+            canvasGraphics.Clear(Color.White); //sets the bitmap's background to white.
+
+        }
+
+        protected override void OnPaint(PaintEventArgs e)
+        {
+            base.OnPaint(e);
+
+            //if (canvas == null)
+            //return;
+
+            e.Graphics.DrawImageUnscaled(canvas, 0, 0); //places bitmap on the form, aligned with the top left (coordinate point (0,0)).
+        }
+
+        private void Form1_Load(object sender, EventArgs e) //the Form1.cs [Design]* completely disappears if i try remove it, which makes sense but I don't currently need it so it's gonna stay here.
+        {
+
+        }
+
+        protected override void OnResize(EventArgs e) //for when people minimise and maximise their window.
+        {
+            base.OnResize(e);
+
+            if (canvas == null) //kept getting a null unhandled exception at g.DrawImageUnscaled(canvas, 0, 0) a little later on in the code so I added this here.
+                return;
+
+            if (this.ClientSize.Width <= 0 || this.ClientSize.Height <= 0) //ignore if the window is ever minimised.
+                return;
+
+            Bitmap newCanvas = new Bitmap(this.ClientSize.Width, this.ClientSize.Height); //bitmap resized to match ClientSize area.
+
+            using (Graphics g = Graphics.FromImage(newCanvas)) //temp graphics object.
+            {
+                g.Clear(Color.White); //reset background upon resizing.
+                g.DrawImageUnscaled(canvas, 0, 0); //copy the graph from the previous bitmap onto this new, resized bitmap.
+            }
+
+            canvasGraphics.Dispose(); //dispose old the old graphics
+            canvas.Dispose(); //dispose of the old bitmap CHECK IF DISPOSAL CAN BE DONE IN 1 GO E.G. DISPOSING OF JUST THE CANVAS TO GET RID OF EVERYTHING.
+            canvas = newCanvas; //replace the old canvas with the new canvas (HOW IF THE OLD ONE HAS BEEN DISPOSED OF).
+            canvasGraphics = Graphics.FromImage(canvas); //new bitmap needs new graphics object.
+
+            this.Invalidate(); //force the form to paint the graph again
+
+            RedrawGraph();
+        }
+
+        private void RedrawGraph()
+        {
+            if (canvasGraphics == null)
+                return;
+
+            canvasGraphics.Clear(Color.White);
+
+            Rectangle plotArea = new Rectangle(80, 40, (canvas.Width - 120), (canvas.Height - 100));
+
+            DrawAxes(plotArea);
+            DrawAxesScales(plotArea, 0, 500, 5);
+            DrawAxesTitles(plotArea);
+            PlotSampleData(plotArea);
+
+            Invalidate();
+        }
+
+        private void DrawAxes(Rectangle plotArea) //draws axes before plotting data
+        {
+            using (Pen axisPen = new Pen(Color.Black, 2))
+            {
+                canvasGraphics.DrawLine(axisPen, plotArea.Left, plotArea.Bottom, plotArea.Right, plotArea.Bottom); //this paints the x-axis.
+                canvasGraphics.DrawLine(axisPen, plotArea.Left, plotArea.Top, plotArea.Left, plotArea.Bottom); //this paints the y-axis
+            }
+        }
+
+        private void DrawAxesScales(Rectangle plotArea, int minimumValue, int maximumValue, int tickCount)
+        {
+            using (Font labelFont = new Font("Segoe UI", 10))
+            using (Pen tickPen = new Pen(Color.Black, 2))
+            using (Brush textBrush = new SolidBrush(Color.Black))
+            {
+                for (int i = 0; i <= tickCount; i++) //increments i from 0 upwards while it is less than or equal to 'tickCount'
+                {
+                    float ratio = (float)i / tickCount;
+                    int y = plotArea.Bottom - (int)(ratio * plotArea.Height);
+
+                    canvasGraphics.DrawLine(tickPen, (plotArea.Left - 5), y, plotArea.Left, y);
+
+                    int value = minimumValue + (int)((maximumValue - minimumValue) * ratio);
+
+                    string label = value.ToString();
+
+                    SizeF size = canvasGraphics.MeasureString(label, labelFont);
+
+                    canvasGraphics.DrawString(label, labelFont, textBrush, (plotArea.Left - size.Width - 8), (y - size.Height / 2));
+                }
+
+                for (int i = 0; i <= tickCount; i++)
+                {
+                    float ratio = (float)i / tickCount;
+                    int x = plotArea.Right - (int)(ratio * plotArea.Width);
+
+                    canvasGraphics.DrawLine(tickPen, x, (plotArea.Bottom + 5), x, plotArea.Bottom);
+
+                    int value = minimumValue + (int)((maximumValue - minimumValue) * ratio); //this needs to be altered so that the labels are proportionate to years elapsed, rather than per 100,000 people.
+
+                    string label = value.ToString();
+
+                    SizeF size = canvasGraphics.MeasureString (label, labelFont);
+
+                    canvasGraphics.DrawString(label, labelFont, textBrush, (plotArea.Bottom - size.Height - 8), (x - size.Width / 2)); //fix this so values align with x-axis ticks
+                }
+            }
+        }
+
+        private void DrawAxesTitles(Rectangle plotArea)
+        {
+            using (Font titleFont = new Font("Segoe UI", 10, FontStyle.Bold))
+            using (Brush brush = new SolidBrush(Color.Black))
+            {
+                string xAxisTitle = "Year? THIS IS A PLACEHOLDER";
+                SizeF xAxisSize = canvasGraphics.MeasureString(xAxisTitle, titleFont);
+
+                canvasGraphics.DrawString(xAxisTitle, titleFont, brush, (xAxisSize.Width / 2), (plotArea.Bottom + 30));
+
+                string yAxisTitle = "Cases per 100,000 people? PLACEHOLDER";
+
+                canvasGraphics.TranslateTransform(20, (plotArea.Top + plotArea.Height / 2));
+
+                canvasGraphics.RotateTransform(-90);
+
+                SizeF yAxisSize = canvasGraphics.MeasureString(yAxisTitle, titleFont);
+
+                canvasGraphics.DrawString(yAxisTitle, titleFont, brush, (-yAxisSize.Width / 2), 0);
+
+                canvasGraphics.ResetTransform();
+            }
+        }
+
+        private void PlotSampleData(Rectangle plotArea) //RENAME THIS? this method does the plotting of actual data.
+        {
+            Point[] dataPoints = //STRUCTURES HAHAHAHAHAHAHA
+            {
+                new Point(plotArea.Left + 50,  plotArea.Bottom - 60), //do all of these have to be new points? could probably find a more concise way to do this.
+                new Point(plotArea.Left + 150, plotArea.Bottom - 120), //i mean this are just test data anyway.
+                new Point(plotArea.Left + 250, plotArea.Bottom - 90),
+                new Point(plotArea.Left + 350, plotArea.Bottom - 200),
+                new Point(plotArea.Left + 450, plotArea.Bottom - 170),
+                new Point(plotArea.Left + 550, plotArea.Bottom - 260)
+            };
+
+            using (Pen graphPen = new Pen(Color.Blue, 2)) //pen for drawing the graph itself
+            {
+                canvasGraphics.DrawLines(graphPen, dataPoints); //paints lines connecting the data points provided above.
+            }
+
+            this.Invalidate(); //force the form to paint the graph again
+        }
+    } //NOTE TO SELF: FIX THE NEW AXES SCALING ERROR.
+}
